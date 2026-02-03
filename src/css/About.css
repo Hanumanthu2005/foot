@@ -1,0 +1,66 @@
+/* Page Section */
+.section {
+  min-height: calc(100vh - 70px);
+  background-color: #eef2f8;
+  padding: 50px 40px;
+}
+
+/* Main Title */
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin-bottom: 24px;
+}
+
+/* Sub Titles */
+.sub-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-top: 36px;
+  margin-bottom: 12px;
+}
+
+/* Paragraph Text */
+.section-text {
+  max-width: 950px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #475569;
+  margin-bottom: 18px;
+}
+
+/* Technology List */
+.tech-list {
+  max-width: 700px;
+  margin-top: 14px;
+  padding-left: 20px;
+}
+
+.tech-list li {
+  font-size: 0.95rem;
+  color: #334155;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section {
+    padding: 30px 20px;
+  }
+
+  .section-title {
+    font-size: 1.6rem;
+  }
+
+  .sub-title {
+    font-size: 1.15rem;
+  }
+
+  .section-text {
+    font-size: 0.95rem;
+  }
+}
+

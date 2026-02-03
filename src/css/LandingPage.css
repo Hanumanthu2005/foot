@@ -1,0 +1,101 @@
+/* Root */
+.landing {
+  min-height: 100vh;
+  background-color: #eef0f3; /* soft grey background */
+  color: #1f2933;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Section Layout */
+.full-section {
+  min-height: calc(100vh - 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+/* Hero Section */
+.hero {
+  background-color: #eef0f3;
+}
+
+/* Content Card */
+.hero-content {
+  max-width: 900px;
+  background-color: #f7f8fa; /* card grey */
+  padding: 50px 45px;
+  border-radius: 10px;
+  text-align: center;
+
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+
+  /* minimal animation start */
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+/* Animation Trigger */
+.hero-enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+/* Title */
+.hero-content h1 {
+  font-size: 2.4rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+  color: #111827; /* near-black */
+}
+
+/* Description */
+.hero-content p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #4b5563; /* muted grey text */
+  margin-bottom: 34px;
+}
+
+/* Primary Button */
+.home-btn {
+  padding: 12px 30px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+
+  background-color: #374151; /* dark grey */
+  color: #ffffff;
+
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Hover */
+.home-btn:hover {
+  background-color: #1f2933;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* Focus */
+.home-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-content {
+    padding: 40px 25px;
+  }
+
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+
+  .hero-content p {
+    font-size: 0.95rem;
+  }
+}
