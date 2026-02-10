@@ -84,7 +84,7 @@ function Team() {
                     <span key={idx} className="skill-tag">{skill}</span>
                   ))}
                 </div> */}
-                
+
               </div>
             </div>
           ))}

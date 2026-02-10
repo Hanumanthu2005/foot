@@ -159,6 +159,7 @@
   display: inline-block;
   animation: shimmer 3s infinite;
   background-size: 200% 200%;
+  padding-left: 20px;
 }
 
 @keyframes shimmer {
