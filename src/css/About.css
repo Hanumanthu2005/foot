@@ -1,66 +1,192 @@
-/* Page Section */
+:root {
+  --primary: #ff6b35;
+  --primary-dark: #e85d2c;
+  --secondary: #f7931e;
+  --accent: #ffd23f;
+  --bg-dark: #1a1a2e;
+  --bg-darker: #0f0f1e;
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #b0b0b0;
+  --gradient: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ffd23f 100%);
+  --card-bg: rgba(26, 26, 46, 0.85);
+  --navbar-height: 50px;
+}
+
+/* Page Wrapper */
+.about-page {
+  min-height: 100vh;
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  padding-top: var(--navbar-height);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background Animation (shared system style) */
+.background-animation {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.2;
+  animation: float 25s infinite ease-in-out;
+}
+
+.shape-1 {
+  width: 600px;
+  height: 600px;
+  background: var(--primary);
+  top: -300px;
+  right: -300px;
+}
+
+.shape-2 {
+  width: 400px;
+  height: 400px;
+  background: var(--secondary);
+  bottom: -200px;
+  left: -200px;
+}
+
+.shape-3 {
+  width: 500px;
+  height: 500px;
+  background: var(--accent);
+  top: 50%;
+  left: 50%;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(60px, -60px); }
+  66% { transform: translate(-40px, 40px); }
+}
+
+/* Main Section */
 .section {
-  min-height: calc(100vh - 70px);
-  background-color: #eef2f8;
-  padding: 50px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 6rem 2rem 4rem;
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.9s ease-out;
 }
 
 /* Main Title */
 .section-title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: #1e3a8a;
-  margin-bottom: 24px;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 900;
+  margin-bottom: 2.5rem;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Sub Titles */
 .sub-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e40af;
-  margin-top: 36px;
-  margin-bottom: 12px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 3rem 0 1rem;
+  color: var(--text-primary);
+  position: relative;
+  padding-left: 1.25rem;
+}
+
+.sub-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translateY(-50%);
 }
 
 /* Paragraph Text */
 .section-text {
   max-width: 950px;
   font-size: 1.05rem;
-  line-height: 1.7;
-  color: #475569;
-  margin-bottom: 18px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  margin-bottom: 1.25rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
-/* Technology List */
+/* Technology Stack Card */
 .tech-list {
-  max-width: 700px;
-  margin-top: 14px;
-  padding-left: 20px;
+  max-width: 800px;
+  margin-top: 2rem;
+  padding: 2rem;
+  list-style: none;
+  background: var(--card-bg);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  backdrop-filter: blur(20px);
 }
 
 .tech-list li {
+  padding: 0.6rem 0;
   font-size: 0.95rem;
-  color: #334155;
-  margin-bottom: 10px;
-  line-height: 1.5;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tech-list li:last-child {
+  border-bottom: none;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .section {
-    padding: 30px 20px;
+    padding: 4rem 1.5rem 3rem;
   }
 
   .section-title {
-    font-size: 1.6rem;
-  }
-
-  .sub-title {
-    font-size: 1.15rem;
+    font-size: 2.5rem;
   }
 
   .section-text {
-    font-size: 0.95rem;
+    font-size: 1rem;
+  }
+
+  .sub-title {
+    font-size: 1.3rem;
   }
 }
 
+@media (max-width: 480px) {
+  .section {
+    padding: 3rem 1rem 2rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .tech-list {
+    padding: 1.5rem;
+  }
+}

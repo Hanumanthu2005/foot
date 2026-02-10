@@ -3,8 +3,16 @@ import "../css/About.css";
 
 function About() {
   return (
-    <>
+    <div className="about-page">
       <Navbar />
+      
+      {/* Background Animation - matching Home.css */}
+      <div className="background-animation">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
+      </div>
+
       <section className="section">
         <h2 className="section-title">About the Project</h2>
 
@@ -41,12 +49,12 @@ function About() {
           <li>Programming Language: Python 3.x</li>
           <li>Computer Vision: OpenCV</li>
           <li>Deep Learning Model: SSD with MobileNet</li>
-          <li>Tracking Algorithm: Centroid-based object tracking</li>
+          <li>Training Algorithm: Convolution Neural Network</li>
           <li>Frontend: React.js, HTML5, CSS3</li>
           <li>Deployment & Testing: Local system / Docker (optional)</li>
         </ul>
       </section>
-    </>
+    </div>
   );
 }
 

@@ -11,7 +11,7 @@ function Team() {
 
   const teamMembers = [
     {
-      name: "Team Member 1",
+      name: "SAMIREDDY ADI LAKSHMI",
       role: "Backend Developer",
       photo: "/images/team.png",
       skills: ["Python", "Django", "PostgreSQL"],
