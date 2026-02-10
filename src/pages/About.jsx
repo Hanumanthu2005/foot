@@ -49,9 +49,9 @@ function About() {
           <li>Programming Language: Python 3.x</li>
           <li>Computer Vision: OpenCV</li>
           <li>Deep Learning Model: SSD with MobileNet</li>
-          <li>Training Algorithm: Convolution Neural Network</li>
           <li>Frontend: React.js, HTML5, CSS3</li>
-          <li>Deployment & Testing: Local system / Docker (optional)</li>
+          <li>Backend: Flask, FastAPI, TensorFlow, Keras</li>
+          <li>Training Algorithm: Convolution Neural Network</li>
         </ul>
       </section>
     </div>
