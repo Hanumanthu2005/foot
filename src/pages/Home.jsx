@@ -1,232 +1,307 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, Area, AreaChart,
+} from "recharts";
 import Navbar from "../components/Navbar";
 import "../css/Home.css";
 
-function Home() {
-  const [animate, setAnimate] = useState(false);
-  const [currentOccupancy, setCurrentOccupancy] = useState(124);
-  const [entries, setEntries] = useState(86);
-  const [exits, setExits] = useState(62);
-  const [peakCount, setPeakCount] = useState(157);
+const BASE       = import.meta.env.VITE_API_URL ?? "";
+const STREAM_URL = `${BASE}/video_feed`;
 
+/* ── Custom tooltip ─────────────────────────────────────────────────────────── */
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="tooltip-time">{label}</p>
+      {payload.map((p) => (
+        <p key={p.name} className="tooltip-row">
+          <span className="tooltip-dot" style={{ background: p.color }} />
+          {p.name}: <strong>{p.value}</strong>
+        </p>
+      ))}
+    </div>
+  );
+};
+
+/* ── Small reusable SVG icons ───────────────────────────────────────────────── */
+const Icon = {
+  Play:   () => <svg viewBox="0 0 24 24" fill="none"><path d="M5 3L19 12L5 21V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Stop:   () => <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Webcam: () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M2 12C2 6.48 6.48 2 12 2s10 4.48 10 10-4.48 10-10 10S2 17.52 2 12z" stroke="currentColor" strokeWidth="2"/></svg>,
+  Upload: () => <svg viewBox="0 0 24 24" fill="none"><path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="17 8 12 3 7 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Reset:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 3v5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Chart:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18 9L13 14L9 10L3 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Wave:   () => <svg viewBox="0 0 24 24" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  People: () => <svg viewBox="0 0 24 24" fill="none"><path d="M17 21V19C17 17.93 16.58 16.92 15.83 16.17C15.08 15.42 14.07 15 13 15H5C3.93 15 2.92 15.42 2.17 16.17C1.42 16.92 1 17.93 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 11C11.21 11 13 9.21 13 7C13 4.79 11.21 3 9 3C6.79 3 5 4.79 5 7C5 9.21 6.79 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M23 21V19C22.99 18.11 22.7 17.25 22.16 16.55C21.62 15.85 20.86 15.35 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 3.13C16.86 3.35 17.62 3.85 18.17 4.55C18.71 5.25 19.01 6.12 19.01 7.01C19.01 7.89 18.71 8.76 18.17 9.46C17.62 10.16 16.86 10.66 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  In:     () => <svg viewBox="0 0 24 24" fill="none"><path d="M15 3H19C19.53 3 20.04 3.21 20.41 3.58C20.79 3.96 21 4.47 21 5V19C21 19.53 20.79 20.04 20.41 20.41C20.04 20.79 19.53 21 19 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 17L15 12L10 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 12H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Out:    () => <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5C4.47 21 3.96 20.79 3.58 20.41C3.21 20.04 3 19.53 3 19V5C3 4.47 3.21 3.96 3.58 3.58C3.96 3.21 4.47 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 17L9 12L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Bolt:   () => <svg viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  ArrowUp:() => <svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Dash:   () => <svg viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+/* ── Main component ─────────────────────────────────────────────────────────── */
+export default function Home() {
+  const [animate,      setAnimate]      = useState(false);
+  const [metricsIn,    setMetricsIn]    = useState(0);
+  const [metricsOut,   setMetricsOut]   = useState(0);
+  const [isRunning,    setIsRunning]    = useState(false);
+  const [sourceLabel,  setSourceLabel]  = useState("Webcam");
+  const [peakCount,    setPeakCount]    = useState(0);
+  const [chartData,    setChartData]    = useState([]);
+  const [uploading,    setUploading]    = useState(false);
+  const [uploadMsg,    setUploadMsg]    = useState("");
+  const [streamActive, setStreamActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const timeLabel = () =>
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  /* poll metrics every 1 s */
   useEffect(() => {
     setAnimate(true);
-
-    // Simulate real-time data updates
-    const interval = setInterval(() => {
-      setCurrentOccupancy(prev => prev + Math.floor(Math.random() * 5) - 2);
-      setEntries(prev => prev + Math.floor(Math.random() * 3));
-      setExits(prev => prev + Math.floor(Math.random() * 3));
-    }, 3000);
-
-    return () => clearInterval(interval);
+    const poll = async () => {
+      try {
+        const res  = await fetch(`${BASE}/api/metrics`);
+        const data = await res.json();
+        setMetricsIn(data.in);
+        setMetricsOut(data.out);
+        setIsRunning(data.is_running);
+        setSourceLabel(data.source_label ?? "Webcam");
+        setPeakCount((p) => Math.max(p, data.occupancy ?? 0));
+        setChartData((prev) => {
+          const next = [...prev, { time: timeLabel(), In: data.in, Out: data.out }];
+          return next.length > 20 ? next.slice(-20) : next;
+        });
+      } catch { /* backend unreachable */ }
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => clearInterval(id);
   }, []);
+
+  const handleUpload = useCallback(async (file) => {
+    if (!file) return;
+    setUploading(true); setUploadMsg("");
+    const form = new FormData();
+    form.append("video", file);
+    try {
+      const res  = await fetch(`${BASE}/api/upload`, { method: "POST", body: form });
+      const data = await res.json();
+      if (data.success) { setUploadMsg(`✓ ${data.source_label}`); setStreamActive(true); }
+      else               setUploadMsg(`✗ ${data.error}`);
+    } catch { setUploadMsg("✗ Upload failed"); }
+    finally  { setUploading(false); }
+  }, []);
+
+  const handleUseWebcam = useCallback(async () => {
+    try { await fetch(`${BASE}/api/source/webcam`, { method: "POST" }); setStreamActive(true); setUploadMsg("✓ Webcam"); }
+    catch { setUploadMsg("✗ Backend unreachable"); }
+  }, []);
+
+  const handleReset = useCallback(async () => {
+    try { await fetch(`${BASE}/api/reset`, { method: "POST" }); setChartData([]); setPeakCount(0); setUploadMsg("✓ Reset"); }
+    catch { setUploadMsg("✗ Reset failed"); }
+  }, []);
+
+  const occupancy = Math.max(0, metricsIn - metricsOut);
 
   return (
     <div className="home-page">
       <Navbar />
 
-      {/* Background Animation */}
+      {/* bg blobs */}
       <div className="background-animation">
-        <div className="shape shape-1"></div>
-        <div className="shape shape-2"></div>
-        <div className="shape shape-3"></div>
+        <div className="shape shape-1" /><div className="shape shape-2" /><div className="shape shape-3" />
       </div>
 
       <div className={`home-layout ${animate ? "home-enter" : ""}`}>
-        
-        {/* Page Header */}
-        <div className="home-header">
-          <div className="badge">
-            <span className="badge-dot"></span>
-            Live Monitoring Dashboard
-          </div>
-          <h1 className="page-title">
-            System <span className="gradient-text">Overview</span>
-          </h1>
-          <p className="page-subtitle">
-            Real-time foot traffic analysis and occupancy monitoring
-          </p>
-        </div>
 
-        {/* Main Monitoring Area */}
-        <div className="monitoring-section">
+        {/* ── Header strip ── */}
+        <header className="home-header">
+          <div className="badge"><span className="badge-dot" />Live Dashboard</div>
+          <h1 className="page-title">People <span className="gradient-text">Counter</span></h1>
+          <p className="page-subtitle">Real-time foot-traffic · {new Date().toLocaleTimeString()}</p>
+        </header>
+
+        {/* ══════════ LEFT — Video ══════════ */}
+        <section className="monitoring-section">
           <div className="section-header">
-            <h2 className="section-heading">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M15 10L11 14L17 20L21 4L3 11L7 13L9 19L12 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Live Foot Traffic Monitoring
-            </h2>
-            <div className="status-indicator">
-              <span className="status-dot"></span>
-              <span className="status-text">Live</span>
+            <h2 className="section-heading"><Icon.Wave /> Live Feed</h2>
+            <div className={`status-indicator ${isRunning ? "running" : ""}`}>
+              <span className="status-dot" />
+              <span className="status-text">{isRunning ? "Live" : "Idle"}</span>
             </div>
           </div>
 
           <div className="cctv-box">
-            <div className="cctv-overlay">
-              <div className="cctv-grid-overlay"></div>
-            </div>
-            
-            <div className="cctv-placeholder">
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 3H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <p>Live CCTV / Video Stream</p>
-              <span className="cctv-info">Waiting for video feed...</span>
-            </div>
+            <div className="cctv-overlay"><div className="cctv-grid-overlay" /></div>
 
+            {streamActive ? (
+              <img src={STREAM_URL} alt="Live feed" className="live-stream-img"
+                   onError={() => setStreamActive(false)} />
+            ) : (
+              <div className="cctv-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                  <path d="M23 19C23 19.53 22.79 20.04 22.41 20.41C22.04 20.79 21.53 21 21 21H3C2.47 21 1.96 20.79 1.58 20.41C1.21 20.04 1 19.53 1 19V8C1 7.47 1.21 6.96 1.58 6.58C1.96 6.21 2.47 6 3 6H7L9 3H15L17 6H21C21.53 6 22.04 6.21 22.41 6.58C22.79 6.96 23 7.47 23 8V19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 17C14.21 17 16 15.21 16 13C16 10.79 14.21 9 12 9C9.79 9 8 10.79 8 13C8 15.21 9.79 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <p>CCTV Stream</p>
+                <span className="cctv-info">Press Start or upload a video</span>
+              </div>
+            )}
+
+            {streamActive && (
+              <div className="stream-source-badge">
+                <span className="status-dot small" />{sourceLabel}
+              </div>
+            )}
+
+            {/* Controls */}
             <div className="cctv-controls">
-              <button className="control-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 3L19 12L5 21V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Start
+              <button className="control-btn" onClick={() => setStreamActive(true)}><Icon.Play />Start</button>
+              <button className="control-btn" onClick={() => setStreamActive(false)}><Icon.Stop />Stop</button>
+              <button className="control-btn webcam-btn" onClick={handleUseWebcam}><Icon.Webcam />Webcam</button>
+              <button className="control-btn upload-btn" disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}>
+                <Icon.Upload />{uploading ? "…" : "Upload"}
               </button>
-              <button className="control-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="6" y="4" width="4" height="16" stroke="currentColor" strokeWidth="2"/>
-                  <rect x="14" y="4" width="4" height="16" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-                Pause
-              </button>
-              <button className="control-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="4" width="16" height="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Stop
-              </button>
+              <button className="control-btn reset-btn" onClick={handleReset}><Icon.Reset />Reset</button>
+              <input ref={fileInputRef} type="file"
+                     accept="video/mp4,video/avi,video/mov,video/mkv,video/webm"
+                     style={{ display: "none" }}
+                     onChange={(e) => handleUpload(e.target.files?.[0])} />
             </div>
           </div>
-        </div>
 
-        {/* Analytics Board */}
-        <div className="analytics-section">
+          {uploadMsg && (
+            <p className={`upload-msg ${uploadMsg.startsWith("✓") ? "success" : "error"}`}>
+              {uploadMsg}
+            </p>
+          )}
+        </section>
+
+        {/* ══════════ RIGHT — Analytics ══════════ */}
+        <section className="analytics-section">
+
+          {/* 4 metric cards */}
           <div className="section-header">
-            <h2 className="section-heading">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M18 9L13 14L9 10L3 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Real-Time Analytics
-            </h2>
-            <div className="analytics-timestamp">
-              Updated: {new Date().toLocaleTimeString()}
-            </div>
+            <h2 className="section-heading"><Icon.Chart /> Analytics</h2>
+            <span className="analytics-timestamp">Updated live</span>
           </div>
 
           <div className="analytics-grid">
             <div className="analytics-card occupancy">
-              <div className="card-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+              <div className="card-icon"><Icon.People /></div>
               <div className="card-content">
-                <span className="metric-label">Current Occupancy</span>
-                <span className="metric-value">{currentOccupancy}</span>
-                <div className="metric-trend up">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>+8% from avg</span>
-                </div>
+                <span className="metric-label">Occupancy</span>
+                <span className="metric-value">{occupancy}</span>
+                <div className="metric-trend up"><Icon.ArrowUp /><span>In − Out</span></div>
               </div>
             </div>
 
             <div className="analytics-card entries">
-              <div className="card-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M10 17L15 12L10 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M15 12H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+              <div className="card-icon"><Icon.In /></div>
               <div className="card-content">
-                <span className="metric-label">Entries Today</span>
-                <span className="metric-value">{entries}</span>
-                <div className="metric-trend neutral">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>Steady</span>
-                </div>
+                <span className="metric-label">Total In</span>
+                <span className="metric-value">{metricsIn}</span>
+                <div className="metric-trend neutral"><Icon.Dash /><span>Entries</span></div>
               </div>
             </div>
 
             <div className="analytics-card exits">
-              <div className="card-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M14 17L9 12L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+              <div className="card-icon"><Icon.Out /></div>
               <div className="card-content">
-                <span className="metric-label">Exits Today</span>
-                <span className="metric-value">{exits}</span>
-                <div className="metric-trend neutral">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>Normal</span>
-                </div>
+                <span className="metric-label">Total Out</span>
+                <span className="metric-value">{metricsOut}</span>
+                <div className="metric-trend neutral"><Icon.Dash /><span>Exits</span></div>
               </div>
             </div>
 
             <div className="analytics-card peak">
-              <div className="card-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+              <div className="card-icon"><Icon.Bolt /></div>
               <div className="card-content">
-                <span className="metric-label">Peak Count</span>
+                <span className="metric-label">Peak</span>
                 <span className="metric-value">{peakCount}</span>
-                <div className="metric-trend down">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5V19M19 12L12 19L5 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>At 2:45 PM</span>
-                </div>
+                <div className="metric-trend down"><Icon.Dash /><span>Session high</span></div>
               </div>
             </div>
           </div>
 
-          {/* Additional Info Cards */}
+          {/* Traffic chart — fills remaining height */}
+          <div className="chart-section">
+            <div className="section-header" style={{ marginBottom: "4px" }}>
+              <h2 className="section-heading"><Icon.Wave /> Traffic Flow</h2>
+              <span className="analytics-timestamp">Last 20 pts</span>
+            </div>
+
+            <div className="chart-card">
+              {chartData.length === 0 ? (
+                <div className="chart-empty">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <p>Waiting for data…</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 4, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gIn"  x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.32}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#fbbf24" stopOpacity={0.32}/>
+                        <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="time" tick={{ fill:"#888", fontSize:9 }}
+                           axisLine={{ stroke:"rgba(255,255,255,0.08)" }} tickLine={false}
+                           interval="preserveStartEnd" />
+                    <YAxis tick={{ fill:"#888", fontSize:9 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ paddingTop:"4px", fontSize:".68rem", color:"#ccc" }} />
+                    <Area type="monotone" dataKey="In"  stroke="#3b82f6" strokeWidth={2}
+                          fill="url(#gIn)"  dot={false} activeDot={{ r:4, fill:"#3b82f6" }} />
+                    <Area type="monotone" dataKey="Out" stroke="#fbbf24" strokeWidth={2}
+                          fill="url(#gOut)" dot={false} activeDot={{ r:4, fill:"#fbbf24" }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* 3 info pills */}
           <div className="info-cards">
             <div className="info-card">
-              <div className="info-icon">📊</div>
+              <span className="info-icon">📊</span>
               <div className="info-content">
-                <h4>Average Flow Rate</h4>
-                <p>12 people/min</p>
+                <h4>Net Flow</h4>
+                <p>{metricsIn - metricsOut >= 0 ? "+" : ""}{metricsIn - metricsOut}</p>
               </div>
             </div>
             <div className="info-card">
-              <div className="info-icon">⏱️</div>
+              <span className="info-icon">🎯</span>
               <div className="info-content">
-                <h4>Average Dwell Time</h4>
-                <p>18 minutes</p>
+                <h4>Source</h4>
+                <p style={{ fontSize:".68rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"80px" }}>{sourceLabel}</p>
               </div>
             </div>
             <div className="info-card">
-              <div className="info-icon">📈</div>
+              <span className="info-icon">📡</span>
               <div className="info-content">
-                <h4>Capacity Utilization</h4>
-                <p>62% of max</p>
+                <h4>Backend</h4>
+                <p>{isRunning ? "Streaming" : "Idle"}</p>
               </div>
             </div>
           </div>
-        </div>
 
+        </section>
       </div>
     </div>
   );
 }
-
-export default Home;
